@@ -4,6 +4,8 @@
 // #define LIST_IMPLEMENTATION
 // #include "list.h"
 //
+// For documentation please see README.md  
+//
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +33,7 @@ typedef struct List{
     unsigned int itemSize;  // Size in bytes of an element.
     char* head;             // Pointer to the "head" of the list.
     char* tail;             // Pointer to the "tail" of the list.
-    char* data;             // Pointer to the data block of"head" and "tail".
+    char* data;             // Pointer to the data block of "head" and "tail".
 } List;
 
 // List Functions:
@@ -66,27 +68,30 @@ List* List_create_subset(List* list, unsigned int start, unsigned int end);
 
 #define List_push_front(list, Data) internal_List_push_front((list), (void*)&Data)
 #define List_push_back(list, Data) internal_List_push_back((list), (void*)&Data)
-
 #define List_peak_front(list, outVal) internal_List_peak_front((list), (void*)&outVal)
 #define List_peak_back(list, outVal) internal_List_peak_back((list), (void*)&outVal)
 #define List_pop_front(list, outVal) internal_List_pop_front((list), (void*)&outVal)
 #define List_pop_back(list, outVal) internal_List_pop_back((list), (void*)&outVal)
 
+#define List_set(list, template, count) internal_List_set(list, (void*)&template, count)
+
 void internal_List_push_front(List* list, void* data);
 void internal_List_push_back(List* list, void* data);
-
 void internal_List_pop_front(List* list, void* outVal);
 void internal_List_pop_back(List* list, void* outVal);
 void internal_List_peak_front(List* list, void* outVal);
 void internal_List_peak_back(List* list, void* outVal);
+
+void internal_List_set(List* list, void* template, const unsigned int count);
 
 void* List_create_array(List* list);
 
 unsigned int List_count(const List* list);
 unsigned int List_byte_count(const List* list);
 
-void List_realloc(List* list, const unsigned int Capacity);
+void List_realloc(List* list, unsigned int Capacity);
 void List_reorder(List* list);
+
 void List_remove_at(List* list, const unsigned int index);
 void* List_at(const List* list, const unsigned int index);
 
@@ -158,7 +163,6 @@ void internal_List_initialize(List* list, const unsigned int ItemSize, const uns
     // Set the head and tail pointers to point into the data section
     list->head = list->data;
     list->tail = list->data;
-
 }
 
 
@@ -189,6 +193,30 @@ void List_destroy(List** list) {
 }
 
 
+void internal_List_set(List* list, void* template, const unsigned int count) {
+    // Clears the List, resizes if needed, and fills it with the data stored in template.
+    //
+    //
+    
+    // If count is greater than the list capacity, reallocate with doubling factor of 1.5
+    if (count >= list->capacity) {
+        char* newData = (char*)malloc(list->itemSize * (count + (count >> 1)));    
+        free(list->data);
+        list->head = newData;
+        list->tail = newData;
+        list->data = newData;
+        list->capacity = count;
+    }
+
+    char* buffer = list->data; 
+    for (unsigned int i = 0; i < count; i++, buffer += list->itemSize) {
+        internal_list_copy(buffer, template, list->itemSize);
+    }
+
+    list->head = list->data + (count * list->itemSize);
+}
+
+
 void* List_create_array(List* list) {
     // Creates a C-Style pointer array from the list.
     // you must free this list yourself!
@@ -215,7 +243,6 @@ void* List_create_array(List* list) {
     }
 
     return array;
-
 }
 
 
@@ -235,25 +262,28 @@ void List_reorder(List* list) {
     // if the list is continuous, and there is enough room at the start of the list's data block to store the whole list:
     if ((list->tail - list->data) >= countBytes && list->head > list->tail) {
         internal_list_copy(list->data, list->tail, countBytes);
-        return;
+    }
+    else {
+        void* temp = List_create_array(list);
+        internal_list_copy(list->data, temp, list->itemSize * List_count(list));
+        free(temp);
     }
 
-    void* temp = List_create_array(list);
-    internal_list_copy(list->data, temp, list->itemSize * List_count(list));
-    free(temp);
+    list->tail = list->data;
+    list->head = list->data + countBytes;
 }
 
 
-void List_realloc(List* list, const unsigned int Capacity) {
+void List_realloc(List* list, unsigned int Capacity) {
     // Reallocates the data section of the list.
     // This function cannot shrink a list. 
     //
     
-    unsigned int oldSize = List_count(list);
+    unsigned int oldCount = List_count(list);
 
-    if(Capacity < oldSize) {
-        // tried to resize a list to a list that cannot fit the old list.
-        return;
+    // Always try to reallocate the buffer. Simply clamp Capacity to always be at least list count.
+    if(Capacity < oldCount) {
+        Capacity = oldCount;
     }
 
     char* newData = (char*)malloc(list->itemSize * Capacity);
@@ -264,7 +294,6 @@ void List_realloc(List* list, const unsigned int Capacity) {
         list->head = newData;
         list->tail = newData;
         list->data = newData;
-        
         return;
     }
 
@@ -287,8 +316,8 @@ void List_realloc(List* list, const unsigned int Capacity) {
     }
     
     // Reassign the head and tail to point into the new data section.
-    list->head = newData + (oldSize * list->itemSize);
-    list->tail = newData; 
+    list->tail = newData;
+    list->head = newData + (oldCount * list->itemSize);
     
     // free the old data, and set the pointer.
     free(list->data);
@@ -339,6 +368,11 @@ void* List_at(const List* list, const unsigned int index) {
     //
     //
 
+    // Return NULL if index is out of range.
+    if (index >= List_count(list)) {
+        return NULL;
+    } 
+
     // Get the pointer to the tail, Index should count up from the tail towards the head.
     char* dataPointer = (char*)list->tail;
     
@@ -377,7 +411,6 @@ void List_remove_at(List* list, const unsigned int index) {
 
     // Decrement the head since we shifted everything back. 
     internal_List_getPrevPtr(char, list, list->head);
-
 }
 
 
@@ -476,5 +509,4 @@ void List_append(List* dst, List* src) {
     dst->head += srcByteCount;
     free(srcArray);
 }
-
 #endif
