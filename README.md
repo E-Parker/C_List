@@ -101,12 +101,14 @@ List_destroy(&intList);
 
 ## Manipulating data
 
-There are several ways to manipulate the data stored in the list. This section covers:
-[Initializing a list with values](#initializing).
-[inserting values](#insertion).
-[Pushing, peaking, and popping values](#pushing--popping).
-[Copying and creating subsets](#copying--subsets).
-[Concatenation and appending](#concatenating--appending).
+There are several ways to manipulate the data stored in the list.
+
+This section covers: 
+[initializing](#initializing), 
+[inserting](#insertion), 
+[pushing, peaking, and popping](#pushing--popping), 
+[copying \ subsets](#copying--subsets), and
+[concatenation \ appending](#concatenating--appending).
 
 Indexing and iterating is covered in the next section, [here](#indexing--iterating).
 
