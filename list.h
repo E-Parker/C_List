@@ -16,6 +16,10 @@
 #error List implementation is only compatable with C99 and above.
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include <stddef.h>
 
 #define _list_copy(dst, src, size) do { for (size_t __iter = 0; __iter < (size_t)size; ++__iter) { ((char*)(dst))[__iter] = ((char*)(src))[__iter]; } } while(0)
@@ -119,6 +123,9 @@ void*   List_at (const List* list, const size_t index);
 /* Appends the contents of source list to the end of destination list.*/
 _Bool   List_append (List* src, List* dst);
 
+#if defined(__cplusplus)
+}
+#endif
 #endif
 
 #if defined(LIST_IMPLEMENTATION)
